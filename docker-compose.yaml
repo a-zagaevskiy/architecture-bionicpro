@@ -1,5 +1,7 @@
 version: '3.8'
 
+name: zagaevskiy-sprint-8
+
 services:
   keycloak_db:
     image: postgres:14
