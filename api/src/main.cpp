@@ -4,9 +4,11 @@
 #include "reports_handler.hpp"
 
 int main(int argc, char *argv[]) {
-  const auto component_list = userver::components::MinimalServerComponentList()
-                                  .Append<api::CorsMiddleware>()
-                                  .Append<api::ReportHandler>();
+  const auto component_list =
+      userver::components::MinimalServerComponentList()
+          .Append<api::ReportHandler>()
+          .Append<api::CorsPipelineBuilder>("cors-middleware-pipeline-builder")
+          .Append<api::CorsMiddlewareFactory>();
 
   return userver::utils::DaemonMain(argc, argv, component_list);
 }

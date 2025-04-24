@@ -18,8 +18,8 @@ RUN mkdir build && cd build && \
 FROM ghcr.io/userver-framework/ubuntu-22.04-userver-base:latest
 
 COPY --from=builder /app/build/api /usr/local/bin/
-COPY config.yaml /etc/userver-configs/
+COPY static_config.yaml /etc/userver-configs/
 
 EXPOSE 8000
 
-CMD ["api", "--config", "/etc/userver-configs/config.yaml"]
+CMD ["api", "--config", "/etc/userver-configs/static_config.yaml"]

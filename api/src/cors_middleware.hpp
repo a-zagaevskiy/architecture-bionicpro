@@ -1,59 +1,70 @@
-#include <userver/components/component.hpp>
-#include <userver/server/handlers/http_handler_base.hpp>
+#include <userver/formats/yaml/serialize.hpp>
+#include <userver/server/middlewares/configuration.hpp>
+#include <userver/server/middlewares/http_middleware_base.hpp>
 #include <userver/server/http/http_response.hpp>
-#include <userver/yaml_config/schema.hpp>
-
 namespace api {
 
 using namespace userver;
 
-class CorsMiddleware final : public userver::server::handlers::HttpHandlerBase {
-  std::vector<std::string> allowed_origins_;
+class CorsMiddleware final : public server::middlewares::HttpMiddlewareBase {
   bool allow_credentials_;
 
  public:
   static constexpr std::string_view kName = "cors-middleware";
 
-  using HttpHandlerBase::HttpHandlerBase;
+  CorsMiddleware(const server::handlers::HttpHandlerBase&,
+                 yaml_config::YamlConfig config)
+      : allow_credentials_(config["allow_credentials"].As<bool>(false)) {}
 
-  CorsMiddleware(const components::ComponentConfig& config,
-                 const components::ComponentContext& context)
-      : HttpHandlerBase(config, context),
-        allowed_origins_(
-            config["allowed_origins"].As<std::vector<std::string>>()),
-        allow_credentials_(config["allow_credentials"].As<bool>(false)) {}
+ private:
+  void HandleRequest(server::http::HttpRequest& request,
+                     server::request::RequestContext& context) const override {
 
-  std::string HandleRequestThrow(
-      const userver::server::http::HttpRequest& request,
-      userver::server::request::RequestContext& context) const override {
     auto& response = request.GetHttpResponse();
-    const auto& origin = request.GetHeader(std::string("Origin"));
-
-    if (!origin.empty() &&
-        std::find(allowed_origins_.begin(), allowed_origins_.end(), origin) !=
-            allowed_origins_.end()) {
-      response.SetHeader(std::string("Access-Control-Allow-Origin"), origin);
-    }
-
-    response.SetHeader(std::string("Access-Control-Allow-Methods"),
+    response.SetHeader(kAccessControlAllowOrigin, std::string{"*"});
+    response.SetHeader(kAccessControlAllowMethods,
                        std::string("GET, POST, PUT, DELETE, OPTIONS"));
-    response.SetHeader(std::string("Access-Control-Allow-Headers"),
+    response.SetHeader(kAccessControlAllowHeaders,
                        std::string("Content-Type, Authorization"));
 
     if (allow_credentials_) {
-      response.SetHeader(std::string("Access-Control-Allow-Credentials"),
-                         std::string("true"));
+      response.SetHeader(kAccessControlAllowCredentials, std::string("true"));
     }
 
-    if (request.GetMethod() == userver::server::http::HttpMethod::kOptions) {
-      response.SetStatus(userver::server::http::HttpStatus::kNoContent);
-      return {};
-    }
-    return HttpHandlerBase::HandleRequestThrow(request, context);
+    //if (request.GetMethod() == server::http::HttpMethod::kOptions) {
+    //  response.SetStatus(server::http::HttpStatus::kNoContent);
+    //  return;
+    //}
+    Next(request, context);
   }
 
-  static yaml_config::Schema GetStaticConfigSchema() {
-    return yaml_config::Schema(R"(
+  static constexpr http::headers::PredefinedHeader kAccessControlAllowOrigin{
+      "Access-Control-Allow-Origin"};
+  static constexpr http::headers::PredefinedHeader kAccessControlAllowMethods{
+      "Access-Control-Allow-Methods"};
+  static constexpr http::headers::PredefinedHeader kAccessControlAllowHeaders{
+      "Access-Control-Allow-Headers"};
+  static constexpr http::headers::PredefinedHeader
+      kAccessControlAllowCredentials{"Access-Control-Allow-Credentials"};
+};
+
+class CorsMiddlewareFactory final
+    : public server::middlewares::HttpMiddlewareFactoryBase {
+ public:
+  static constexpr std::string_view kName{CorsMiddleware::kName};
+ 
+  using HttpMiddlewareFactoryBase::HttpMiddlewareFactoryBase;
+ 
+ private:
+  std::unique_ptr<server::middlewares::HttpMiddlewareBase> Create(
+      const server::handlers::HttpHandlerBase& handler,
+      yaml_config::YamlConfig middleware_config) const override {
+    return std::make_unique<CorsMiddleware>(handler,
+                                            std::move(middleware_config));
+  }
+
+  yaml_config::Schema GetMiddlewareConfigSchema() const override {
+    return formats::yaml::FromString(R"(
 type: object
 description: CORS middleware component
 additionalProperties: false
@@ -61,14 +72,22 @@ properties:
     allow_credentials:
         type: boolean
         description: whether to allow credentials
-        default: false
-    allowed_origins:
-        type: array
-        items:
-            type: string
-        description: list of allowed origins
-        default: []
-)");
+)")
+        .As<yaml_config::Schema>();
+  }
+};
+
+class CorsPipelineBuilder final
+    : public server::middlewares::HandlerPipelineBuilder {
+ public:
+  using HandlerPipelineBuilder::HandlerPipelineBuilder;
+
+  server::middlewares::MiddlewaresList BuildPipeline(
+      server::middlewares::MiddlewaresList server_middleware_pipeline)
+      const override {
+    auto& pipeline = server_middleware_pipeline;
+    pipeline.emplace_back(CorsMiddleware::kName);
+    return pipeline;
   }
 };
 
