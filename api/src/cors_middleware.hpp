@@ -22,19 +22,17 @@ class CorsMiddleware final : public server::middlewares::HttpMiddlewareBase {
 
     auto& response = request.GetHttpResponse();
     response.SetHeader(kAccessControlAllowOrigin, std::string{"*"});
-    response.SetHeader(kAccessControlAllowMethods,
-                       std::string("GET, POST, PUT, DELETE, OPTIONS"));
-    response.SetHeader(kAccessControlAllowHeaders,
-                       std::string("Content-Type, Authorization"));
-
+    response.SetHeader(kAccessControlAllowMethods, std::string{"*"});
+    response.SetHeader(kAccessControlAllowHeaders, std::string{"*"});
     if (allow_credentials_) {
       response.SetHeader(kAccessControlAllowCredentials, std::string("true"));
     }
 
-    //if (request.GetMethod() == server::http::HttpMethod::kOptions) {
-    //  response.SetStatus(server::http::HttpStatus::kNoContent);
-    //  return;
-    //}
+    if (request.GetMethod() == server::http::HttpMethod::kOptions) {
+      response.SetHeader(kAccessControlMaxAge, std::to_string(86400));
+      response.SetStatus(server::http::HttpStatus::kOk);
+      return;
+    }
     Next(request, context);
   }
 
@@ -46,6 +44,8 @@ class CorsMiddleware final : public server::middlewares::HttpMiddlewareBase {
       "Access-Control-Allow-Headers"};
   static constexpr http::headers::PredefinedHeader
       kAccessControlAllowCredentials{"Access-Control-Allow-Credentials"};
+  static constexpr http::headers::PredefinedHeader
+      kAccessControlMaxAge{"Access-Control-Max-Age"};
 };
 
 class CorsMiddlewareFactory final

@@ -9,11 +9,17 @@ class ReportHandler final : public userver::server::handlers::HttpHandlerBase {
   using HttpHandlerBase::HttpHandlerBase;
 
   std::string HandleRequestThrow(
-      const userver::server::http::HttpRequest &,
-      userver::server::request::RequestContext &) const override {
+      const userver::server::http::HttpRequest& request,
+      userver::server::request::RequestContext&) const override {
+    auto& response = request.GetHttpResponse();
+    response.SetHeader(kContentDisposition, "attachment");
+    response.SetContentType("text/plain");
     return "The Answer to the Ultimate Question of Life, the Universe, and "
-           "Everything is 42\n";
+           "Everything is 42";
   }
+
+  static constexpr http::headers::PredefinedHeader kContentDisposition{
+      "Content-Disposition"};
 };
 
 }  // namespace api

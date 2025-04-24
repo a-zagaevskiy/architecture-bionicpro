@@ -24,7 +24,7 @@ components_manager:
         cors-middleware-pipeline-builder: {}
         handler-reports:
             path: /reports
-            method: GET
+            method: GET,OPTIONS
             task_processor: main-task-processor
             middlewares:
                 pipeline-builder: cors-middleware-pipeline-builder
