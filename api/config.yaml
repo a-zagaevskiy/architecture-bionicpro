@@ -20,6 +20,11 @@ components_manager:
                     file_path: '@stderr'
                     level: debug
                     overflow_behavior: discard  # Drop logs if the system is too busy to write them down.
+
+        cors-middleware:
+            allow_credentials: true
+            allowed_origins:
+              - "http://localhost:3000"
  
         handler-reports:
             path: /reports
