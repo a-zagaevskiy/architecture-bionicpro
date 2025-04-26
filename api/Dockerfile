@@ -3,6 +3,13 @@
 #
 FROM ghcr.io/userver-framework/ubuntu-22.04-userver:latest AS builder
 
+# Build jwt-cpp
+RUN git clone https://github.com/Thalhammer/jwt-cpp.git
+RUN cd jwt-cpp && \
+    cmake -DJWT_BUILD_EXAMPLES=OFF -DJWT_BUILD_TESTS=OFF . && \
+    cmake --build . && \
+    cmake --install .
+
 # Copy sources
 WORKDIR /app
 COPY ./src/ ./

@@ -80,18 +80,4 @@ properties:
   }
 };
 
-class CorsPipelineBuilder final
-    : public server::middlewares::HandlerPipelineBuilder {
- public:
-  using HandlerPipelineBuilder::HandlerPipelineBuilder;
-
-  server::middlewares::MiddlewaresList BuildPipeline(
-      server::middlewares::MiddlewaresList server_middleware_pipeline)
-      const override {
-    auto& pipeline = server_middleware_pipeline;
-    pipeline.emplace_back(CorsMiddleware::kName);
-    return pipeline;
-  }
-};
-
 }  // namespace api
